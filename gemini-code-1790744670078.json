@@ -1,0 +1,135 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DetectiveBoardMap20x20",
+  "description": "Configuração da grade 20x20 baseada rigorosamente na matriz fornecida.",
+  "board": {
+    "width": 20,
+    "height": 20,
+    "cellCount": 400
+  },
+  "rooms": [
+    {
+      "id": "batalhao",
+      "name": "Batalhão",
+      "bounds": { "x": 0, "y": 0, "width": 5, "height": 5 },
+      "secretPassageTo": "mecanica",
+      "doors": [
+        { "cell": { "x": 4, "y": 2 }, "direction": "RIGHT", "exitTo": { "x": 5, "y": 2 } }
+      ]
+    },
+    {
+      "id": "academia",
+      "name": "Academia",
+      "bounds": { "x": 7, "y": 0, "width": 6, "height": 4 },
+      "doors": [
+        { "cell": { "x": 12, "y": 1 }, "direction": "RIGHT", "exitTo": { "x": 13, "y": 1 } },
+        { "cell": { "x": 9, "y": 3 }, "direction": "DOWN", "exitTo": { "x": 9, "y": 4 } }
+      ]
+    },
+    {
+      "id": "bistro_esquina",
+      "name": "Bistrô de Esquina",
+      "bounds": { "x": 15, "y": 0, "width": 5, "height": 5 },
+      "doors": [
+        { "cell": { "x": 15, "y": 2 }, "direction": "LEFT", "exitTo": { "x": 14, "y": 2 } }
+      ]
+    },
+    {
+      "id": "upa_24h",
+      "name": "UPA 24H",
+      "bounds": { "x": 0, "y": 6, "width": 5, "height": 4 },
+      "secretPassageTo": "metro",
+      "doors": [
+        { "cell": { "x": 4, "y": 7 }, "direction": "RIGHT", "exitTo": { "x": 5, "y": 7 } }
+      ]
+    },
+    {
+      "id": "praca_unico_poder",
+      "name": "Praça Único Poder",
+      "bounds": { "x": 7, "y": 6, "width": 6, "height": 7 },
+      "doors": [
+        { "cell": { "x": 9, "y": 6 }, "direction": "UP", "exitTo": { "x": 9, "y": 5 } },
+        { "cell": { "x": 7, "y": 9 }, "direction": "LEFT", "exitTo": { "x": 6, "y": 9 } },
+        { "cell": { "x": 12, "y": 9 }, "direction": "RIGHT", "exitTo": { "x": 13, "y": 9 } },
+        { "cell": { "x": 9, "y": 12 }, "direction": "DOWN", "exitTo": { "x": 9, "y": 13 } }
+      ]
+    },
+    {
+      "id": "museu",
+      "name": "Museu",
+      "bounds": { "x": 15, "y": 6, "width": 5, "height": 4 },
+      "doors": [
+        { "cell": { "x": 15, "y": 7 }, "direction": "LEFT", "exitTo": { "x": 14, "y": 7 } }
+      ]
+    },
+    {
+      "id": "banco_master",
+      "name": "Banco Master",
+      "bounds": { "x": 0, "y": 11, "width": 5, "height": 4 },
+      "doors": [
+        { "cell": { "x": 4, "y": 12 }, "direction": "RIGHT", "exitTo": { "x": 5, "y": 12 } }
+      ]
+    },
+    {
+      "id": "palace_hotel",
+      "name": "Palace Hotel",
+      "bounds": { "x": 15, "y": 11, "width": 5, "height": 4 },
+      "doors": [
+        { "cell": { "x": 15, "y": 12 }, "direction": "LEFT", "exitTo": { "x": 14, "y": 12 } }
+      ]
+    },
+    {
+      "id": "metro",
+      "name": "Metrô",
+      "bounds": { "x": 0, "y": 16, "width": 5, "height": 4 },
+      "secretPassageTo": "upa_24h",
+      "doors": [
+        { "cell": { "x": 4, "y": 17 }, "direction": "RIGHT", "exitTo": { "x": 5, "y": 17 } }
+      ]
+    },
+    {
+      "id": "teatro_regional",
+      "name": "Teatro Regional",
+      "bounds": { "x": 7, "y": 16, "width": 6, "height": 4 },
+      "doors": [
+        { "cell": { "x": 9, "y": 16 }, "direction": "UP", "exitTo": { "x": 9, "y": 15 } },
+        { "cell": { "x": 7, "y": 18 }, "direction": "LEFT", "exitTo": { "x": 6, "y": 18 } }
+      ]
+    },
+    {
+      "id": "mecanica",
+      "name": "Mecânica",
+      "bounds": { "x": 15, "y": 16, "width": 5, "height": 4 },
+      "secretPassageTo": "batalhao",
+      "doors": [
+        { "cell": { "x": 16, "y": 16 }, "direction": "UP", "exitTo": { "x": 16, "y": 15 } }
+      ]
+    }
+  ],
+  "secretPassages": [
+    { "roomA": "batalhao", "roomB": "mecanica" },
+    { "roomA": "upa_24h", "roomB": "metro" }
+  ],
+  "grid_matrix": [
+    [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 2, 1, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 2, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 2, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 1, 1, 0, 0, 2, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [0, 0, 0, 0, 0, 1, 1, 0, 0, 2, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 2, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 2, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 1, 1, 2, 0, 0, 0, 0, 2, 1, 1, 0, 0, 0, 0, 0],
+    [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
+    [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 2, 1, 1, 0, 0, 2, 0, 0, 0, 1, 1, 2, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [0, 0, 0, 0, 0, 1, 1, 0, 0, 2, 0, 0, 0, 1, 1, 0, 2, 0, 0, 0],
+    [0, 0, 0, 0, 2, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 1, 1, 2, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]
+  ]
+}

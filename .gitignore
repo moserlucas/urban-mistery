@@ -1,0 +1,18 @@
+# Dependências
+node_modules/
+
+# Backups locais
+backups/
+
+# Logs e arquivos de monitoramento
+*.log
+bot_monitoring.log
+
+# Arquivos do Sistema Operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Variáveis de ambiente
+.env
+.env.local

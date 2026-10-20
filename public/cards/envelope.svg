@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 280" width="400" height="280">
+  <defs>
+    <linearGradient id="envBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2e2213" />
+      <stop offset="100%" stop-color="#181107" />
+    </linearGradient>
+    <linearGradient id="waxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e74c3c" />
+      <stop offset="50%" stop-color="#c0392b" />
+      <stop offset="100%" stop-color="#78281f" />
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="380" height="260" rx="10" fill="url(#envBody)" stroke="#d4af37" stroke-width="2.5" />
+  <path d="M10,270 L200,140 L390,270" fill="none" stroke="#8a7322" stroke-width="1.5" opacity="0.5" />
+  <path d="M10,10 L160,140" fill="none" stroke="#8a7322" stroke-width="1.5" opacity="0.5" />
+  <path d="M390,10 L240,140" fill="none" stroke="#8a7322" stroke-width="1.5" opacity="0.5" />
+  <polygon points="10,10 390,10 200,150" fill="#24190c" stroke="#d4af37" stroke-width="2" />
+  <circle cx="200" cy="150" r="32" fill="url(#waxGrad)" stroke="#f1c40f" stroke-width="1.5" />
+  <circle cx="200" cy="150" r="24" fill="none" stroke="#f1c40f" stroke-width="1" stroke-dasharray="3 1.5" />
+  <text x="200" y="146" text-anchor="middle" fill="#f1c40f" font-family="'Cinzel', serif" font-size="7.5" font-weight="bold" letter-spacing="1.5">SEGREDO</text>
+  <text x="200" y="158" text-anchor="middle" fill="#f1c40f" font-family="'Cinzel', serif" font-size="6.5" letter-spacing="1">CRIME</text>
+</svg>

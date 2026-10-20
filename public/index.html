@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mistério Urbano - Tabuleiro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Kalam:wght@400;700&family=Patrick+Hand&family=Special+Elite&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+  <!-- Tela de Lobby -->
+  <div id="lobby-screen" class="container card">
+    <div class="lobby-title-banner">
+      <div class="lobby-deco-line"></div>
+      <h1 class="noir-title">Mistério Urbano</h1>
+      <div class="lobby-deco-line"></div>
+    </div>
+    <p class="subtitle">A magnata Odete Rolemã foi misteriosamente assassinada. Escolha seu suspeito e desvende o crime.</p>
+    
+    <!-- BARRA MULTIPLAYER: SALA E LINK DE CONVITE -->
+    <div class="lobby-multiplayer-panel">
+      <div class="room-tag-box">
+        <span class="room-tag-lbl">SALA:</span>
+        <span id="room-code-tag" class="room-code-tag">sala-principal</span>
+      </div>
+      <button id="btn-generate-invite" class="btn btn-warning btn-invite-link" type="button" title="Copiar Link de Convite para a Sala">
+        <svg xmlns="http://www.w3.org/2000/svg" class="ui-icon-xs" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#120d04" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+        <span id="btn-invite-text">Gerar Link de Convite</span>
+      </button>
+      <div id="invite-feedback-msg" class="invite-feedback-msg" style="display: none;">
+        Link de convite copiado! Compartilhe com até 8 jogadores.
+      </div>
+    </div>
+
+    <!-- ÁREA DE AÇÃO DO JOGADOR NO LOBBY -->
+    <div class="lobby-form" id="lobby-action-row">
+      <input type="text" id="input-name" placeholder="Digite seu nome de detetive" maxlength="20" required>
+      <!-- Select oculto para compatibilidade com lógica existente -->
+      <select id="select-character" style="display: none;">
+        <option value="">Carregando suspeitos...</option>
+      </select>
+      
+      <!-- Slot de Ação Único: O botão verde ou o indicador de espera aparecem no exato mesmo lugar de Entrar no Jogo -->
+      <button id="btn-join" class="btn btn-primary lobby-action-btn">Entrar no Jogo</button>
+      <button id="btn-start" class="btn btn-success lobby-action-btn" style="display: none;">Iniciar Partida (Completar com Bots)</button>
+      <div id="guest-waiting-box" class="guest-waiting-inline lobby-action-btn" style="display: none;">
+        <span class="waiting-pulse-dot"></span>
+        <span id="guest-waiting-text">Aguardando o anfitrião iniciar a partida...</span>
+      </div>
+    </div>
+
+    <!-- SELEÇÃO VISUAL DE PERSONAGEM VIA CARTAS -->
+    <div class="lobby-character-selection">
+      <div class="lobby-selection-header">
+        <img src="cards/icons/user.svg" class="ui-icon" alt="" />
+        <h3 class="noir-label">Selecione quem você deseja representar (até 8 jogadores humanos):</h3>
+      </div>
+      <div id="lobby-character-cards-grid" class="character-cards-grid">
+        <!-- Renderizado dinamicamente com as cartas de personagens -->
+      </div>
+    </div>
+
+    <!-- BARRA INFERIOR DO LOBBY: CONECTADOS E TOTAL NA MESA -->
+    <div class="lobby-footer-bar">
+      <h4 class="noir-label">Investigadores Conectados (<span id="player-count">0</span>/8):</h4>
+      <div id="host-count-wrapper" class="host-count-group">
+        <label for="select-player-count">Total na Mesa:</label>
+        <select id="select-player-count">
+          <option value="3">3 investigadores</option>
+          <option value="4">4 investigadores</option>
+          <option value="5">5 investigadores</option>
+          <option value="6">6 investigadores</option>
+          <option value="7">7 investigadores</option>
+          <option value="8" selected>8 investigadores</option>
+        </select>
+      </div>
+    </div>
+    <ul id="lobby-players-list" class="badge-list"></ul>
+  </div>
+
+  <!-- Tela do Jogo (Cockpit Widescreen Desktop 100% em tela única e sem rolagem) -->
+  <div id="game-screen" class="game-cockpit-layout" style="display: none;">
+    
+    <!-- BARRA HUD SUPERIOR (100% Widescreen, Top Banner) -->
+    <header class="cockpit-hud-header">
+      <div class="hud-left-group">
+        <span class="hud-title-badge">MISTÉRIO URBANO</span>
+        <button id="btn-view-story" class="btn btn-primary hud-btn" title="Visualizar Dossiê do Caso">
+          <img src="cards/icons/card.svg" class="ui-icon-xs" alt="" /> Caso Odete Rolemã
+        </button>
+        <div class="speed-control-box">
+          <label for="select-bot-speed">
+            <img src="cards/icons/speed.svg" class="ui-icon-xs" alt="" /> Velocidade:
+          </label>
+          <select id="select-bot-speed">
+            <option value="normal" selected>Padrão (4s)</option>
+            <option value="fast">Rápido (2s)</option>
+            <option value="slow">Lento (6s)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Ticker Narrativo Central -->
+      <div id="narrative-bar" class="cockpit-narrative-bar">A partida começou!</div>
+
+      <!-- Indicador de Turno no Canto Direito -->
+      <div class="hud-right-group">
+        <div id="turn-indicator" class="alert-box cockpit-turn-badge">Aguardando início...</div>
+        <div id="hud-timer-badge" class="alert-box hud-timer-badge" style="display: none;">
+          <img src="cards/icons/clock.svg" class="ui-icon-xs" alt="" />
+          <span id="hud-timer-text">30s</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ÁREA PRINCIPAL DO COCKPIT (Left Wing + Center Stage + Right Wing) -->
+    <div class="cockpit-main-area">
+
+      <!-- ALA ESQUERDA: Histórico de Palpites & Área de Ação Dinâmica -->
+      <aside class="cockpit-wing wing-left">
+
+        <!-- Histórico de Palpites (Aumentado confortavelmente) -->
+        <div id="game-history-card" class="card noir-card cockpit-card-history">
+          <div id="history-header" class="history-header">
+            <div class="history-title">
+              <img src="cards/icons/search.svg" class="ui-icon-sm" alt="" />
+              <span class="history-badge">PALPITES</span>
+              <span>Últimos (<span id="history-count">0</span>/<span id="history-max">3</span>)</span>
+            </div>
+            <button id="btn-toggle-history" class="btn-history-toggle" type="button">
+              <span id="history-toggle-text">Ver histórico</span>
+            </button>
+          </div>
+          <div id="history-content" class="history-content">
+            <ul id="history-list" class="history-list">
+              <li class="history-empty">Nenhum palpite registrado ainda.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Painel de Ações do Turno (Movido para a esquerda, com fontes e botões grandes) -->
+        <div id="action-panel" class="card noir-card cockpit-card-actions">
+          <!-- Estado de Espera -->
+          <div id="action-panel-waiting">
+            <div class="waiting-header">
+              <span class="waiting-pulse-dot"></span>
+              <h4 id="waiting-title">Aguardando a Rodada</h4>
+            </div>
+            <p id="waiting-status-text" class="waiting-subtext">Aguardando início do jogo...</p>
+          </div>
+
+          <!-- Estado Ativo -->
+          <div id="action-panel-active" style="display: none;">
+            <div class="turn-active-header">
+              <h3 class="turn-active-title">Sua Vez de Jogar</h3>
+              <div id="turn-timer-badge" class="turn-timer-badge">
+                <img src="cards/icons/clock.svg" class="ui-icon-xs" alt="" />
+                <span>Tempo: <strong id="turn-timer-text">30s</strong></span>
+              </div>
+            </div>
+            
+            <div id="turn-decision-buttons" class="btn-group-vertical">
+              <button id="btn-roll-dice" class="btn btn-primary btn-large">
+                <img src="cards/icons/dice.svg" class="ui-icon-xs" alt="" /> Lançar o Dado
+              </button>
+              <button id="btn-secret-passage" class="btn btn-warning" style="display: none;">
+                <img src="cards/icons/door.svg" class="ui-icon-xs" alt="" /> Usar Passagem Secreta
+              </button>
+              <button id="btn-stay-suggest" class="btn btn-info" style="display: none;">
+                <img src="cards/icons/search.svg" class="ui-icon-xs" alt="" /> Palpitar Aqui Mesmo
+              </button>
+              <button id="btn-open-accusation-modal" class="btn btn-danger">
+                <img src="cards/icons/alert.svg" class="ui-icon-xs" alt="" /> Fazer Acusação Final
+              </button>
+            </div>
+
+            <div id="movement-guidance" style="display: none; margin-top: 10px;">
+              <p style="font-size: 15px;">Você tirou <strong id="dice-result-val" style="font-size: 24px; color:#f1c40f;"></strong> no dado!</p>
+              <p class="small" style="color: #2ecc71; font-size: 13px; margin-top: 4px;"><strong>Clique em uma das casas iluminadas no mapa!</strong></p>
+            </div>
+
+            <div id="suggestion-box" style="display: none; margin-top: 10px;">
+              <div class="suggestion-header-row">
+                <h4 class="suggestion-room-header">Sala: <span id="current-room-name"></span></h4>
+                <div id="suggestion-timer-badge" class="turn-timer-badge suggestion-timer">
+                  <img src="cards/icons/clock.svg" class="ui-icon-xs" alt="" />
+                  <span>Palpite: <strong id="suggestion-timer-text">30s</strong></span>
+                </div>
+              </div>
+              <div class="form-group-cockpit">
+                <label>Suspeito:</label>
+                <select id="select-suspect"></select>
+              </div>
+              <div class="form-group-cockpit">
+                <label>Arma:</label>
+                <select id="select-weapon"></select>
+              </div>
+              <div class="btn-group" style="margin-top: 10px;">
+                <button id="btn-submit-suggestion" class="btn btn-warning btn-large" style="width: 100%;">
+                  <img src="cards/icons/search.svg" class="ui-icon-xs" alt="" /> Dar Palpite
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- PALCO CENTRAL: Tabuleiro Hero Flanqueado pelos Investigadores com 3D Dice Overlay -->
+      <main class="cockpit-center-stage">
+        <!-- Flanco Esquerdo do Tabuleiro (4 Investigadores) -->
+        <div id="board-flank-left" class="board-flank flank-left"></div>
+
+        <div class="canvas-wrapper">
+          <!-- Overlay 3D transparente do dado sobre o tabuleiro -->
+          <div id="dice-animation-overlay" class="dice-overlay" style="display: none;">
+            <div class="dice-shadow" id="dice-shadow"></div>
+            <div id="dice-3d-container" class="dice-3d-container">
+              <div id="dice-3d" class="dice-3d">
+                <div class="dice-face front"><div class="dice-dots" id="dice-dots-front"></div></div>
+                <div class="dice-face back"><div class="dice-dots" id="dice-dots-back"></div></div>
+                <div class="dice-face top"><div class="dice-dots" id="dice-dots-top"></div></div>
+                <div class="dice-face bottom"><div class="dice-dots" id="dice-dots-bottom"></div></div>
+                <div class="dice-face left"><div class="dice-dots" id="dice-dots-left"></div></div>
+                <div class="dice-face right"><div class="dice-dots" id="dice-dots-right"></div></div>
+              </div>
+            </div>
+            <div id="dice-result-display" class="dice-result-display" style="display: none;">
+              <span id="dice-result-number" class="dice-result-number">6</span>
+              <span class="dice-result-label">no dado</span>
+            </div>
+          </div>
+          <canvas id="board-canvas" width="660" height="660"></canvas>
+        </div>
+
+        <!-- Flanco Direito do Tabuleiro (4 Investigadores) -->
+        <div id="board-flank-right" class="board-flank flank-right"></div>
+      </main>
+
+      <!-- ALA DIREITA: Meu Perfil, Minhas Cartas Privadas e Caderno de Anotações -->
+      <aside class="cockpit-wing wing-right">
+        
+        <!-- Meu Perfil e Status -->
+        <div class="card noir-card cockpit-card-profile">
+          <div class="cockpit-card-header">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <img src="cards/icons/shield.svg" class="ui-icon-xs" alt="" />
+              <span class="noir-label">Meu Perfil:</span>
+              <strong id="my-name" style="color: var(--gold); font-size: 13px;"></strong>
+            </div>
+          </div>
+          <div class="profile-stats-grid">
+            <div class="profile-stat-box">
+              <span class="stat-lbl">Peão</span>
+              <span id="my-char" class="stat-val"></span>
+            </div>
+            <div class="profile-stat-box">
+              <span class="stat-lbl">Posição</span>
+              <strong id="my-current-pos" class="stat-val highlight-gold"></strong>
+            </div>
+            <div class="profile-stat-box">
+              <span class="stat-lbl">Passagens</span>
+              <strong id="secret-passages-left" class="stat-val highlight-gold">3</strong>
+            </div>
+          </div>
+
+          <!-- Minhas Cartas Privadas (Alta Definição) -->
+          <div class="cockpit-hand-section">
+            <div class="cockpit-hand-header">
+              <span class="noir-label">Minhas Cartas Privadas:</span>
+            </div>
+            <div id="my-hand-fan" class="cards-fan-container">
+              <div id="my-hand-fan-inner" class="cards-fan"></div>
+              <p class="cards-fan-hint" id="cards-fan-hint" style="display:none;">Clique na carta para zoom</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botão Integrado do Caderno de Anotações (Abaixo de Minhas Cartas) -->
+        <button id="btn-notebook-open" class="btn-notebook-cockpit" title="Abrir Caderno de Anotações">
+          <img src="cards/icons/notebook.svg" class="ui-icon-sm" alt="" />
+          <span class="notebook-cockpit-text">Caderno do Detetive</span>
+        </button>
+
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- ===== OVERLAYS GLOBAIS ===== -->
+
+  <!-- ANIMAÇÃO DE 3 CARTAS SENDO ENVELOPADAS NO INÍCIO -->
+  <div id="envelope-intro-modal" class="modal-overlay" style="display: none;">
+    <div class="envelope-intro-box">
+      <div class="envelope-intro-header">
+        <span class="envelope-intro-tag">DOSSIÊ CONFIDENCIAL</span>
+        <h2 class="envelope-intro-title">O Crime de Odete Rolemã</h2>
+        <p class="envelope-intro-desc">Selando o assassino, a arma e o local no Envelope Secreto...</p>
+      </div>
+
+      <!-- Área de Animação das 3 Cartas e Envelope -->
+      <div class="envelope-stage">
+        <!-- 3 Cartas do Crime caindo no envelope -->
+        <div class="envelope-flying-cards">
+          <div class="flying-card card-suspect" id="flying-card-suspect">
+            <img src="cards/card_back.svg" alt="Suspeito" />
+            <span class="flying-card-label">SUSPEITO</span>
+          </div>
+          <div class="flying-card card-weapon" id="flying-card-weapon">
+            <img src="cards/card_back.svg" alt="Arma" />
+            <span class="flying-card-label">ARMA</span>
+          </div>
+          <div class="flying-card card-location" id="flying-card-location">
+            <img src="cards/card_back.svg" alt="Local" />
+            <span class="flying-card-label">LOCAL</span>
+          </div>
+        </div>
+
+        <!-- Gráfico do Envelope Confidencial -->
+        <div class="envelope-container" id="envelope-container">
+          <img src="cards/envelope.svg" alt="Envelope Confidencial" class="envelope-graphic" />
+        </div>
+      </div>
+
+      <div class="envelope-intro-footer">
+        <p class="envelope-status-text" id="envelope-status-text">Mistério selado! Encontre as pistas.</p>
+        <button id="btn-skip-envelope" class="btn btn-warning" style="margin-top: 10px;">Iniciar Investigação</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pop-up de Carta Revelada (animado) -->
+  <div id="card-reveal-overlay" class="modal-overlay" style="display: none; z-index: 10005;">
+    <div class="card-reveal-popup">
+      <div class="card-reveal-header">
+        <span class="card-reveal-badge">CARTA REFUTADA DO SEU PALPITE</span>
+      </div>
+      <div class="card-reveal-body">
+        <div class="card-reveal-from" id="card-reveal-from-text">Um investigador revelou uma carta!</div>
+        <div class="card-image-frame" id="card-reveal-frame">
+          <img id="card-reveal-img" src="" alt="" class="card-reveal-image">
+          <div class="card-reveal-name" id="card-reveal-name-text"></div>
+        </div>
+      </div>
+      <!-- Opção de Preenchimento Automático no Caderno -->
+      <div id="card-reveal-auto-option" class="card-reveal-auto-option" style="display: none;">
+        <label class="card-reveal-checkbox-label">
+          <input type="checkbox" id="chk-auto-mark-notebook" checked />
+          <span>Riscar automaticamente no caderno</span>
+        </label>
+      </div>
+
+      <button id="btn-close-card-reveal" class="btn btn-success" style="width: 100%; margin-top: 14px;">Entendido</button>
+      <button id="btn-card-reveal-notebook" class="btn btn-warning" style="width: 100%; margin-top: 8px; display: none;">
+        <img src="cards/icons/notebook.svg" class="ui-icon-xs" alt="" /> Anotar no Caderno
+      </button>
+    </div>
+  </div>
+
+  <!-- Caderno de Detetive (Overlay Expandido) usando a imagem do caderno autêntico -->
+  <div id="notebook-overlay" class="modal-overlay" style="display: none;">
+    <div class="detective-notebook-container">
+      
+      <!-- Top Bar com Título e Fechar (Sem pausa de jogo) -->
+      <div class="notebook-top-bar">
+        <div class="notebook-top-title">
+          <img src="cards/icons/notebook.svg" class="ui-icon-xs" alt="" />
+          <span>Caderno de Anotações do Investigador</span>
+        </div>
+        <button id="btn-notebook-close" class="btn-notebook-close" title="Fechar Caderno">
+          <img src="cards/icons/cross.svg" class="ui-icon-xs" alt="" />
+        </button>
+      </div>
+
+      <!-- Palco do Caderno com caderno_detetive.jpg -->
+      <div class="notebook-book-stage">
+        <img src="cards/general/caderno_detetive.jpg" alt="Caderno do Detetive" class="notebook-bg-img" />
+
+        <!-- Página Esquerda: Suspeitos e Armas -->
+        <div class="notebook-page page-left">
+          <div class="notebook-section" id="notebook-suspects-section">
+            <div class="notebook-section-header">
+              <img src="cards/icons/user.svg" class="ui-icon-xs" alt="" />
+              <span>Suspeitos</span>
+            </div>
+            <div class="notebook-section-body" id="notebook-suspects"></div>
+          </div>
+
+          <div class="notebook-section" id="notebook-weapons-section" style="margin-top: 8px;">
+            <div class="notebook-section-header">
+              <img src="cards/icons/card.svg" class="ui-icon-xs" alt="" />
+              <span>Armas</span>
+            </div>
+            <div class="notebook-section-body" id="notebook-weapons"></div>
+          </div>
+        </div>
+
+        <!-- Página Direita: Locais do Crime e Notas -->
+        <div class="notebook-page page-right">
+          <div class="notebook-section" id="notebook-locations-section">
+            <div class="notebook-section-header">
+              <img src="cards/icons/door.svg" class="ui-icon-xs" alt="" />
+              <span>Locais do Crime</span>
+            </div>
+            <div class="notebook-section-body" id="notebook-locations"></div>
+          </div>
+
+          <div class="notebook-page-note">
+            <div class="notebook-note-title">Caso Odete Rolemã</div>
+            <div class="notebook-note-desc">Risque as pistas descartadas com um clique.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="notebook-legend">
+        <span class="legend-item"><img src="cards/icons/cross.svg" class="ui-icon-xs" alt="" /> Riscado (Inocente)</span>
+        <span class="legend-item"><img src="cards/icons/check.svg" class="ui-icon-xs" alt="" /> Confirmado (Suspeito)</span>
+        <span class="legend-tip">Clique na linha para alternar a anotação</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal de Carta Expandida (clique na mão) -->
+  <div id="card-zoom-overlay" class="modal-overlay" style="display: none;">
+    <div class="card-zoom-popup">
+      <img id="card-zoom-img" src="" alt="" class="card-zoom-image">
+      <div class="card-zoom-info">
+        <div class="card-zoom-name" id="card-zoom-name"></div>
+        <div class="card-zoom-type" id="card-zoom-type"></div>
+      </div>
+      <button id="btn-close-card-zoom" class="btn btn-primary" style="width: 100%; margin-top: 14px;">Fechar</button>
+    </div>
+  </div>
+
+  <!-- Modal da História: Caso Odete Rolemã (100% Tela Única Sem Rolagem) -->
+  <div id="story-modal" class="modal-overlay" style="display: none;">
+    <div class="story-card story-card-single-screen">
+      <div class="story-header">
+        <h2 class="story-title-main">O Caso Odete Rolemã</h2>
+        <p class="story-intro">
+          Na calada da noite, a poderosa e implacável magnata <strong>Odete Rolemã</strong> foi encontrada morta! O laudo pericial atesta: <em>homicídio premeditado</em>, e seu testamento milionário desapareceu. Todos os 8 suspeitos do seu círculo próximo tinham fortes motivos para desejar o seu fim. Quem foi o autor do crime, qual arma utilizou e em qual local cometeu o assassinato?
+        </p>
+      </div>
+
+      <h3 class="story-section-title">
+        Dossiê dos 8 Suspeitos e suas Relações com Odete:
+      </h3>
+
+      <div class="suspects-grid suspects-grid-compact">
+        <div class="suspect-dossier" style="border-left-color: #f1c40f;">
+          <div class="dossier-title" style="color: #f1c40f;">Fahur (Sargento)</div>
+          <div class="dossier-desc">Odete o chantageava com um dossiê falso na Corregedoria. Ele precisava silenciá-la antes do vazamento.</div>
+        </div>
+
+        <div class="suspect-dossier" style="border-left-color: #ecf0f1;">
+          <div class="dossier-title" style="color: #ecf0f1;">Toguro (Fisiculturista)</div>
+          <div class="dossier-desc">Antigo protegido de Odete, teve patrocínio cancelado e foi deserdado após discussão pública.</div>
+        </div>
+
+        <div class="suspect-dossier" style="border-left-color: #8d6e63;">
+          <div class="dossier-title" style="color: #d7ccc8;">Jacão (Chef)</div>
+          <div class="dossier-desc">Proprietário do bistrô, asfixiado por empréstimos ilegais que devia a Odete, sob ameaça de despejo.</div>
+        </div>
+
+        <div class="suspect-dossier" style="border-left-color: #29b6f6;">
+          <div class="dossier-title" style="color: #29b6f6;">Moraes (Advogado)</div>
+          <div class="dossier-desc">Testamenteiro de Odete. Descobriu que ela iria denunciá-lo à OAB e à polícia por desvios em contas.</div>
+        </div>
+
+        <div class="suspect-dossier" style="border-left-color: #e53935;">
+          <div class="dossier-title" style="color: #ef4444;">Carminha (Atriz)</div>
+          <div class="dossier-desc">Diva dos palcos chantageada com fotos e escândalos que arruinariam seu papel principal no Teatro.</div>
+        </div>
+
+        <div class="suspect-dossier" style="border-left-color: #616161;">
+          <div class="dossier-title" style="color: #cbd5e1;">Peçanha (Segurança)</div>
+          <div class="dossier-desc">Ex-chefe da segurança demitido sem direitos. Conhecia cada ponto cego de câmeras e atalhos da cidade.</div>
+        </div>
+
+        <div class="suspect-dossier" style="border-left-color: #43a047;">
+          <div class="dossier-title" style="color: #4ade80;">Jailson (Mecânico)</div>
+          <div class="dossier-desc">Mecânico particular de Odete. Descobriu adulterações ilegais e foi ameaçado caso não guardasse segredo.</div>
+        </div>
+
+        <div class="suspect-dossier" style="border-left-color: #ec407a;">
+          <div class="dossier-title" style="color: #f472b6;">Tadalafila (Doutor)</div>
+          <div class="dossier-desc">Médico particular de Odete que fornecia substâncias sigilosas. Temia perder o registro e ser preso.</div>
+        </div>
+      </div>
+
+      <button id="btn-close-story" class="btn btn-success btn-story-start">
+        Iniciar Investigação
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal de Encerramento e Epílogo Narrativo -->
+  <div id="epilogue-modal" class="modal-overlay" style="display: none;">
+    <div class="story-card epilogue-card">
+      <div style="text-align: center; margin-bottom: 12px;">
+        <span id="epilogue-badge" class="epilogue-badge">CASO RESOLVIDO</span>
+        <h2 id="epilogue-title" style="color: #ffd700; margin: 8px 0 4px 0; font-size: 24px;">Justiça por Odete Rolemã!</h2>
+        <div id="epilogue-winner-banner" class="winner-hero-banner"></div>
+      </div>
+
+      <!-- Resumo do Envelope Confidencial -->
+      <div class="envelope-summary-box">
+        <div class="envelope-item">
+          <span class="env-label">Assassino:</span>
+          <strong id="epilogue-suspect" class="env-value"></strong>
+        </div>
+        <div class="envelope-item">
+          <span class="env-label">Arma do Crime:</span>
+          <strong id="epilogue-weapon" class="env-value"></strong>
+        </div>
+        <div class="envelope-item">
+          <span class="env-label">Local do Crime:</span>
+          <strong id="epilogue-location" class="env-value"></strong>
+        </div>
+      </div>
+
+      <!-- Narrativa Imersiva Final -->
+      <div class="epilogue-narrative-container">
+        <h4 id="epilogue-deduction-title" style="color: #93c5fd; margin: 0 0 8px 0; font-size: 14px;">Como o Caso Foi Solucionado:</h4>
+        <p id="epilogue-deduction-text" class="epilogue-paragraph"></p>
+        
+        <h4 id="epilogue-crime-title" style="color: #f87171; margin: 12px 0 8px 0; font-size: 14px;">A Resolução do Assassinato:</h4>
+        <p id="epilogue-crime-text" class="epilogue-paragraph"></p>
+      </div>
+
+      <button id="btn-play-again" class="btn btn-success" style="width: 100%; font-size: 16px; font-weight: bold; margin-top: 18px; padding: 12px; cursor: pointer;">
+        Jogar Novamente / Voltar ao Lobby
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal de Acusação Final (Centralizado em Tela Cheia) -->
+  <div id="accusation-modal" class="modal-overlay" style="display: none;">
+    <div class="accusation-popup-card">
+      <div class="accusation-header">
+        <img src="cards/icons/alert.svg" class="ui-icon-sm" alt="" />
+        <h3 class="accusation-title">ACUSAÇÃO FINAL</h3>
+      </div>
+      <p class="accusation-warning">
+        ATENÇÃO: Se errar qualquer um dos três itens, você será eliminado da investigação!
+      </p>
+      <div class="form-group-cockpit">
+        <label>Suspeito:</label>
+        <select id="accuse-suspect"></select>
+      </div>
+      <div class="form-group-cockpit">
+        <label>Arma:</label>
+        <select id="accuse-weapon"></select>
+      </div>
+      <div class="form-group-cockpit">
+        <label>Local:</label>
+        <select id="accuse-location"></select>
+      </div>
+      <div class="btn-group" style="margin-top: 14px; gap: 10px;">
+        <button id="btn-confirm-accusation" class="btn btn-danger" style="flex: 1; padding: 10px; font-weight: bold;">Confirmar Acusação</button>
+        <button id="btn-cancel-accusation" class="btn btn-primary" style="flex: 1; padding: 10px; font-weight: bold;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Refutação de Palpite (Centralizado em Tela Cheia) -->
+  <div id="refute-modal" class="modal-overlay" style="display: none; z-index: 10006;">
+    <div class="refute-popup-card">
+      <div class="refute-header">
+        <img src="cards/icons/search.svg" class="ui-icon-sm" alt="" />
+        <h3 class="refute-title">Refutação Necessária!</h3>
+      </div>
+      <p class="refute-description">
+        <strong id="refute-suggester" style="color: #f1c40f;"></strong> realizou um palpite e você possui cartas que podem refutá-lo.
+      </p>
+      <p class="refute-instruction">
+        Selecione <strong>1 carta</strong> para mostrar secretamente:
+      </p>
+      <div id="refute-options" class="refute-cards-deck"></div>
+    </div>
+  </div>
+
+  <!-- Modal de Roleta Inicial (Sorteio de Quem Inicia a Partida) -->
+  <div id="roulette-modal" class="modal-overlay" style="display: none;">
+    <div class="roulette-popup-card">
+      <div class="roulette-header">
+        <span class="roulette-tag">SORTEIO INICIAL</span>
+        <h2 class="roulette-title">Quem Inicia os Palpites?</h2>
+        <p class="roulette-subtitle">Sorteando aleatoriamente entre os investigadores da mesa...</p>
+      </div>
+      <div class="roulette-stage">
+        <div class="roulette-pointer"></div>
+        <canvas id="roulette-canvas" width="340" height="340"></canvas>
+      </div>
+      <div id="roulette-winner-announcement" class="roulette-winner-box" style="display: none;">
+        <span class="roulette-winner-label">PRIMEIRO INVESTIGADOR:</span>
+        <div id="roulette-winner-name" class="roulette-winner-title"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="client.js"></script>
+</body>
+</html>
