@@ -11,7 +11,12 @@ function rollDice() {
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Permite conexões de qualquer origem (ou coloque a URL da Vercel)
+    methods: ["GET", "POST"]
+  }
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
@@ -1573,4 +1578,6 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Detetive Urbano Multiplayer rodando na porta ${PORT}`));
+server.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
