@@ -4,10 +4,12 @@
   "description": "Jogo de investigação e dedução multiplayer com bots baseado em regras de tabuleiro clássico.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
   },
   "dependencies": {
     "express": "^4.19.2",
-    "socket.io": "^4.7.5"
+    "ws": "^8.18.0"
   }
 }

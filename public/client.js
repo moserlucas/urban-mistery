@@ -1,5 +1,118 @@
 // public/client.js
-const socket = io();
+// Cliente WebSocket Nativo compativel com Cloudflare Workers e Node.js
+class NativeSocketClient {
+  constructor() {
+    this.id = null;
+    this.connected = false;
+    this.listeners = new Map();
+    this.ws = null;
+    this.messageQueue = [];
+    this.connectedRoomId = null;
+    this.connect();
+  }
+
+  connect() {
+    const isHttps = window.location.protocol === 'https:';
+    const wsProto = isHttps ? 'wss:' : 'ws:';
+    const urlParams = new URLSearchParams(window.location.search);
+    const customServer = urlParams.get('server') || window.WS_SERVER_URL;
+    let host = window.location.host;
+    if (customServer) {
+      host = customServer.replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '').replace(/\/$/, '');
+    }
+    const rId = urlParams.get('sala') || urlParams.get('room') || 'sala-principal';
+    this.connectedRoomId = rId;
+
+    const wsUrl = `${wsProto}//${host}/ws?roomId=${encodeURIComponent(rId)}`;
+
+    try {
+      this.ws = new WebSocket(wsUrl);
+    } catch (e) {
+      console.warn('Erro ao conectar WebSocket:', e);
+      setTimeout(() => this.connect(), 2000);
+      return;
+    }
+
+    this.ws.onopen = () => {
+      // Conexao TCP aberta, aguarda handshake com ID
+    };
+
+    this.ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        const { event: evt, data } = payload;
+        if (evt === 'connect') {
+          this.id = data.id;
+          this.connected = true;
+          while (this.messageQueue.length > 0) {
+            const item = this.messageQueue.shift();
+            this.ws.send(JSON.stringify(item));
+          }
+          this._dispatch('connect', data);
+        } else {
+          this._dispatch(evt, data);
+        }
+      } catch (err) {
+        console.error('Erro ao processar mensagem do servidor:', err);
+      }
+    };
+
+    this.ws.onclose = () => {
+      const wasConnected = this.connected;
+      this.connected = false;
+      if (wasConnected) {
+        this._dispatch('disconnect');
+      }
+      setTimeout(() => {
+        if (!this.connected) this.connect();
+      }, 2000);
+    };
+
+    this.ws.onerror = (err) => {
+      console.warn('WebSocket error:', err);
+    };
+  }
+
+  emit(event, data) {
+    if (event === 'join_room_request' && data && data.roomId && data.roomId !== this.connectedRoomId) {
+      this.connectedRoomId = data.roomId;
+      if (this.ws) {
+        try { this.ws.close(); } catch (e) {}
+      }
+      this.connect();
+      return;
+    }
+
+    const payload = { event, data: data !== undefined ? data : {} };
+    if (this.ws && this.ws.readyState === WebSocket.OPEN && this.connected) {
+      this.ws.send(JSON.stringify(payload));
+    } else {
+      this.messageQueue.push(payload);
+    }
+  }
+
+  on(event, callback) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, []);
+    }
+    this.listeners.get(event).push(callback);
+  }
+
+  _dispatch(event, data) {
+    const handlers = this.listeners.get(event);
+    if (handlers) {
+      handlers.forEach(fn => {
+        try {
+          fn(data);
+        } catch (e) {
+          console.error(`Erro no listener para ${event}:`, e);
+        }
+      });
+    }
+  }
+}
+
+const socket = new NativeSocketClient();
 
 // Parse da Sala a partir dos parâmetros de URL (?sala=... ou ?room=...)
 const urlParams = new URLSearchParams(window.location.search);
